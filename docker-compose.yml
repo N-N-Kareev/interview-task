@@ -1,0 +1,30 @@
+version: '3.5'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: interview_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=user
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=postgresql
+    ports:
+      - '7233:7233'
+      - '8233:8233'
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
