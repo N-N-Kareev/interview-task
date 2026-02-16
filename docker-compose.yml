@@ -15,11 +15,13 @@ services:
   temporal:
     image: temporalio/auto-setup:latest
     environment:
-      - DB=postgresql
+      - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=user
       - POSTGRES_PWD=password
-      - POSTGRES_SEEDS=postgresql
+      - POSTGRES_SEEDS=postgres
+      # Обрати внимание на одинарные кавычки ниже, это важно:
+      - 'DYNAMIC_CONFIG=frontend.enableServerVersionCheck: [{value: false, constraints: {}}]'
     ports:
       - '7233:7233'
       - '8233:8233'
