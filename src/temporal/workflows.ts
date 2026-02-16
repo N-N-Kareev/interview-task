@@ -1,6 +1,5 @@
-// src/temporal/workflows.ts
 import { proxyActivities } from '@temporalio/workflow';
-import type { createActivities } from './activities'; // Только тип!
+import type { createActivities } from './activities';
 import { RzhdResponse } from './shared';
 
 const { fetchDataFromRzhd, saveTrackingEvent } = proxyActivities<

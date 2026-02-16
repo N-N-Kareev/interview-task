@@ -1,11 +1,8 @@
-// src/temporal/activities.ts
 import { PrismaService } from '../prisma/prisma.service';
 import { RzhdResponse } from './shared';
 
-// Фабрика активностей принимает PrismaService
 export const createActivities = (prisma: PrismaService) => ({
 
-  // 1. Имитация тяжелого запроса в РЖД
   async fetchDataFromRzhd(wagonNumber: string): Promise<RzhdResponse> {
     console.log(`[Activity] Запрос в РЖД по вагону ${wagonNumber}...`);
 
