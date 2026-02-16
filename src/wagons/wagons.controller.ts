@@ -33,4 +33,9 @@ export class WagonsController {
       workflowId,
     };
   }
+
+  @Get('metrics')
+  async getDbMetrics() {
+    return this.wagonsService.getMetrics();
+  }
 }

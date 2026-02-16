@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Railway Logistics Dashboard</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+      :root {
+          --primary: #3b82f6;
+          --primary-hover: #2563eb;
+          --danger: #ef4444;
+          --danger-hover: #dc2626;
+          --bg: #f0f2f5;
+          --text-main: #1e293b;
+          --text-muted: #64748b;
+          --border: #e2e8f0;
+      }
+
+      body {
+          font-family: 'Segoe UI', system-ui, sans-serif;
+          background: var(--bg);
+          padding: 20px;
+          margin: 0;
+          color: var(--text-main);
+      }
+
+      .container {
+          max-width: 1400px;
+          margin: 0 auto;
+      }
+
+      h1 { margin-bottom: 25px; font-size: 1.8rem; }
+
+      .card {
+          background: white;
+          padding: 20px;
+          border-radius: 16px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          margin-bottom: 20px;
+      }
+
+      .controls {
+          display: flex;
+          gap: 15px;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+      }
+
+      .input-group { display: flex; gap: 10px; flex-wrap: wrap; }
+
+      input {
+          padding: 10px 15px;
+          border-radius: 8px;
+          border: 1px solid #cbd5e1;
+          font-size: 1rem;
+          outline: none;
+      }
+
+      input:focus { border-color: var(--primary); }
+
+      .search-box { width: 100%; margin-bottom: 15px; display: flex; gap: 10px; }
+      .search-box input { flex: 1; }
+
+      .btn {
+          background: var(--primary);
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 1rem;
+          font-weight: 600;
+          transition: all 0.2s;
+      }
+
+      .btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+      .btn-secondary { background: #94a3b8; }
+      .btn-danger { background: var(--danger); }
+
+      .grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+
+      .table-container {
+          max-height: 500px;
+          overflow-y: auto;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+      }
+
+      table { width: 100%; border-collapse: collapse; position: relative; }
+
+      thead th {
+          position: sticky;
+          top: 0;
+          background: #f8fafc;
+          z-index: 1;
+          box-shadow: inset 0 -2px 0 var(--border);
+          text-align: left;
+          color: var(--text-muted);
+          padding: 15px;
+          font-size: 0.85rem;
+          text-transform: uppercase;
+          cursor: pointer;
+          user-select: none;
+      }
+
+      thead th:hover { color: var(--primary); background: #f1f5f9; }
+
+      td { padding: 15px; border-bottom: 1px solid var(--border); }
+
+      tbody tr.clickable:hover { background-color: #f8fafc; cursor: pointer; }
+
+      .chart-box { height: 300px; display: flex; justify-content: center; }
+
+      .stats-row { margin-top: 20px; display: flex; justify-content: space-around; text-align: center; }
+
+      .stat-number { font-size: 2.2rem; font-weight: 800; color: var(--text-main); }
+      .stat-label { color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+
+      .badge { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+      .status-ARRIVAL { background: #dcfce7; color: #166534; }
+      .status-DEPARTURE { background: #fee2e2; color: #991b1b; }
+      .status-WAITING { background: #f1f5f9; color: #64748b; }
+
+      /* Modal Styles */
+      .modal-overlay {
+          position: fixed;
+          top: 0; left: 0; width: 100%; height: 100%;
+          background: rgba(0,0,0,0.5);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 100;
+      }
+      .modal-content {
+          width: 90%; max-width: 800px;
+          max-height: 80vh; overflow-y: auto;
+          position: relative;
+      }
+      .close-btn {
+          position: absolute; top: 15px; right: 20px;
+          font-size: 1.5rem; cursor: pointer; border: none; background: none;
+      }
+
+      @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
+      @media (max-width: 640px) { .controls { flex-direction: column; align-items: stretch; } }
+  </style>
+</head>
+<body>
+<div id="app" class="container">
+  <h1>🚄 Railway Logistics Dashboard</h1>
+
+  <div class="card controls">
+    <div class="input-group">
+      <input v-model="targetWagon" placeholder="Wagon ID">
+      <button @click="syncWagon" class="btn">Sync Single</button>
+      <button @click="startLoadTest" class="btn btn-danger">🔥 Load Test (50)</button>
+    </div>
+    <div v-if="message" style="color: #166534; font-weight: 600;">{{ message }}</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>📊 Analytics</h3>
+      <div class="chart-box">
+        <canvas id="chart"></canvas>
+      </div>
+      <div class="stats-row">
+        <div v-for="stat in stats" :key="stat.event_type">
+          <div class="stat-number">{{ stat.total }}</div>
+          <div class="stat-label">{{ stat.event_type }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📋 Operations</h3>
+      <div class="search-box">
+        <input v-model="searchQuery" placeholder="Filter by serial number...">
+        <button @click="resetSort" class="btn btn-secondary">Reset</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+          <tr>
+            <th @click="toggleSort('serialNumber')">Wagon ID ↕</th>
+            <th @click="toggleSort('status')">Status ↕</th>
+            <th @click="toggleSort('records')">History ↕</th>
+            <th @click="toggleSort('updatedAt')">Updated ↕</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr v-for="wagon in processedWagons" :key="wagon.id" @click="viewReport(wagon)" class="clickable">
+            <td style="font-weight: 600;">{{ wagon.serialNumber }}</td>
+            <td>
+              <span v-if="wagon.events.length" :class="'badge status-' + wagon.events[0].eventType">
+                {{ wagon.events[0].eventType }}
+              </span>
+              <span v-else class="badge status-WAITING">WAITING</span>
+            </td>
+            <td>{{ wagon.events.length }} events</td>
+            <td style="color: var(--text-muted); font-size: 0.9rem;">
+              {{ new Date(wagon.updatedAt).toLocaleTimeString() }}
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="selectedWagon" class="modal-overlay" @click="selectedWagon = null">
+    <div class="card modal-content" @click.stop>
+      <button class="close-btn" @click="selectedWagon = null">&times;</button>
+      <h2>Report: {{ selectedWagon.serialNumber }}</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+          <tr>
+            <th>Event Type</th>
+            <th>Location</th>
+            <th>Timestamp</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr v-for="event in selectedWagon.events" :key="event.id">
+            <td><span :class="'badge status-' + event.eventType">{{ event.eventType }}</span></td>
+            <td>{{ event.location }}</td>
+            <td>{{ new Date(event.eventTime).toLocaleString() }}</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const { createApp, ref, onMounted, computed } = Vue;
+
+  createApp({
+    setup() {
+      const targetWagon = ref('RZD-' + Math.floor(Math.random() * 1000));
+      const searchQuery = ref('');
+      const message = ref('');
+      const wagons = ref([]);
+      const stats = ref([]);
+      const selectedWagon = ref(null);
+      const sortKey = ref('updatedAt');
+      const sortOrder = ref('desc');
+      let chartInstance = null;
+      let lastStatsJson = "";
+
+      const processedWagons = computed(() => {
+        let result = [...wagons.value];
+        if (searchQuery.value) {
+          const q = searchQuery.value.toLowerCase();
+          result = result.filter(w => w.serialNumber.toLowerCase().includes(q));
+        }
+        result.sort((a, b) => {
+          let valA, valB;
+          if (sortKey.value === 'serialNumber') { valA = a.serialNumber; valB = b.serialNumber; }
+          else if (sortKey.value === 'records') { valA = a.events.length; valB = b.events.length; }
+          else if (sortKey.value === 'status') { valA = a.events[0]?.eventType || ''; valB = b.events[0]?.eventType || ''; }
+          else { valA = new Date(a.updatedAt); valB = new Date(b.updatedAt); }
+
+          if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1;
+          if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1;
+          return 0;
+        });
+        return result;
+      });
+
+      const viewReport = async (wagon) => {
+        const res = await fetch(`http://localhost:3000/wagons/${wagon.id}`);
+        selectedWagon.value = await res.json();
+      };
+
+      const fetchWagons = async () => {
+        const res = await fetch('http://localhost:3000/wagons?take=100');
+        wagons.value = await res.json();
+      };
+
+      const fetchStats = async () => {
+        const res = await fetch('http://localhost:3000/analytics/stats');
+        const data = await res.json();
+        if (JSON.stringify(data) !== lastStatsJson) {
+          stats.value = data;
+          updateChart(data);
+          lastStatsJson = JSON.stringify(data);
+        }
+      };
+
+      const updateChart = (data) => {
+        const ctx = document.getElementById('chart');
+        if (!data.length) return;
+        const labels = data.map(d => d.event_type);
+        const values = data.map(d => Number(d.total));
+        if (chartInstance) {
+          chartInstance.data.labels = labels;
+          chartInstance.data.datasets[0].data = values;
+          chartInstance.update();
+        } else {
+          chartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: labels,
+              datasets: [{ data: values, backgroundColor: ['#4ade80', '#f87171', '#fbbf24'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+          });
+        }
+      };
+
+      const syncWagon = async () => {
+        await fetch(`http://localhost:3000/wagons/${targetWagon.value}/sync`, { method: 'POST' });
+        message.value = 'Sync triggered';
+        setTimeout(() => message.value = '', 2000);
+      };
+
+      const startLoadTest = () => {
+        for(let i=0; i<50; i++) fetch(`http://localhost:3000/wagons/AUTO-${Date.now()}-${i}/sync`, { method: 'POST' });
+      };
+
+      const toggleSort = (key) => {
+        if (sortKey.value === key) sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+        else { sortKey.value = key; sortOrder.value = 'asc'; }
+      };
+
+      const resetSort = () => { sortKey.value = 'updatedAt'; sortOrder.value = 'desc'; searchQuery.value = ''; };
+
+      onMounted(() => {
+        fetchWagons(); fetchStats();
+        setInterval(() => { fetchWagons(); fetchStats(); }, 2000);
+      });
+
+      return { targetWagon, searchQuery, processedWagons, message, stats, selectedWagon, viewReport, syncWagon, startLoadTest, toggleSort, resetSort };
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>
