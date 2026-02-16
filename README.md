@@ -1,98 +1,116 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Railway Logistics Tracking System (RLTS)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+![Status](https://img.shields.io/badge/status-active-success.svg)
+![NestJS](https://img.shields.io/badge/NestJS-v11-red.svg)
+![NodeJS](https://img.shields.io/badge/Node.js-v24_(LTS)-green.svg)
+![Temporal](https://img.shields.io/badge/Temporal-SDK_v1.14-blue.svg)
+![Prisma](https://img.shields.io/badge/Prisma-v7-black.svg)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-v15-336791.svg)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 📋 Overview
 
-## Description
+RLTS is a specialized backend service designed to handle the synchronization and processing of railway logistics data. The system is engineered to integrate with high-latency external providers (e.g., RZhD/National Railway API), processing tracking events for thousands of wagons with guaranteed delivery.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+The project demonstrates a **Fault-Tolerant Architecture** capable of handling unreliable external APIs without data loss, leveraging **Temporal** for workflow orchestration and **Prisma 7** with native database drivers for high-performance PostgreSQL interaction.
 
-## Project setup
+## 🏗 Architecture & Tech Stack
 
-```bash
-$ npm install
-```
+The solution is built on a microservices-ready architecture using NestJS modules.
 
-## Compile and run the project
+| Component | Technology | Role |
+|-----------|------------|------|
+| **Core Framework** | NestJS v11 | Modular backend architecture, Dependency Injection. |
+| **Runtime** | Node.js v24 (LTS) | High-performance JavaScript runtime (Krypton release). |
+| **Orchestration** | Temporal.io (SDK v1.14) | Management of distributed transactions, retries, and long-running workflows. |
+| **Database** | PostgreSQL 15 | Primary relational data store. |
+| **ORM** | Prisma v7 | Type-safe database access using the modern `driverAdapters` (`@prisma/adapter-pg`) for native connection pooling. |
+| **Infrastructure** | Docker Compose | Containerization of DB and Temporal Server. |
 
-```bash
-# development
-$ npm run start
+### Workflow Logic (Temporal)
+The system implements a robust synchronization pattern:
+1.  **Trigger:** API request initiates a workflow for a specific wagon.
+2.  **Activity A (Fetch):** Connects to the external Railway API. Implements **Exponential Backoff** logic to handle 503/Timeout errors automatically.
+3.  **Activity B (Persist):** Saves or updates the wagon status and tracking history in PostgreSQL using an atomic transaction.
 
-# watch mode
-$ npm run start:dev
+## 🚀 Getting Started
 
-# production mode
-$ npm run start:prod
-```
+### Prerequisites
+* **Node.js v24 (LTS)**
+* Docker & Docker Compose
+* NPM or Yarn
 
-## Run tests
+### Installation
 
-```bash
-# unit tests
-$ npm run test
+1.  **Clone the repository**
+    ```bash
+    git clone [https://github.com/your-username/railway-tracking-system.git](https://github.com/your-username/railway-tracking-system.git)
+    cd railway-tracking-system
+    ```
 
-# e2e tests
-$ npm run test:e2e
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
 
-# test coverage
-$ npm run test:cov
-```
+3.  **Environment Setup**
+    Create a `.env` file in the root directory:
+    ```env
+    DATABASE_URL="postgresql://user:password@localhost:5432/interview_db?schema=public"
+    ```
 
-## Deployment
+4.  **Start Infrastructure (Postgres + Temporal)**
+    ```bash
+    docker-compose up -d
+    ```
+    *Wait approx. 30 seconds for Temporal server to initialize.*
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+5.  **Apply Database Migrations**
+    ```bash
+    npx prisma migrate dev --name init
+    ```
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+6.  **Start the Application**
+    ```bash
+    npm run start:dev
+    ```
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+## 🔌 API Reference
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 1. Create Wagon
+Register a new wagon in the system.
+* **POST** `/wagons`
+* **Body:**
+    ```json
+    {
+      "serialNumber": "RZD-777"
+    }
+    ```
 
-## Resources
+### 2. Trigger Synchronization (The Core Feature)
+Starts a Temporal Workflow to fetch data from the external provider.
+* **POST** `/wagons/:serialNumber/sync`
+* **Example:** `POST http://localhost:3000/wagons/RZD-777/sync`
+* **Response:** Returns a `workflowId` for tracking.
 
-Check out a few resources that may come in handy when working with NestJS:
+### 3. Get All Wagons & Events
+View the synchronized data.
+* **GET** `/wagons`
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## 📊 Monitoring & Observability
 
-## Support
+You can monitor the workflow execution, view retry attempts, and analyze stack traces via the Temporal UI.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+* **Temporal UI:** [http://localhost:8233](http://localhost:8233)
 
-## Stay in touch
+This dashboard provides visibility into the "Self-Healing" capabilities of the system when the external API simulates a failure.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 💡 Key Architectural Decisions
 
-## License
+### Why Temporal instead of Bull/RabbitMQ?
+Standard queues handle asynchronous tasks but struggle with complex state management and retry policies for multi-step processes. Temporal provides **Durable Execution**, ensuring that if the service crashes or the external API is down, the process resumes exactly where it left off, guaranteeing data consistency without manual intervention.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### Why Prisma 7 with Driver Adapters?
+Prisma 7 introduces support for native database drivers (`@prisma/adapter-pg` + `pg`). This reduces the overhead of the Rust-based query engine in serverless/edge environments and allows for better connection pooling management compared to the standard TCP-based approach, which is critical for high-load ingestion (1M+ events).
+
+## 📄 License
+[UNLICENSED](LICENSE)
